@@ -67,9 +67,25 @@
         self.signInButton.enabled = [x boolValue];
     }];
     
-    [[self.signInButton rac_signalForControlEvents:UIControlEventTouchUpInside] subscribeNext:^(id x) {
-        NSLog(@"按钮点击");
-    }];
+    
+    [[[[self.signInButton
+       rac_signalForControlEvents:UIControlEventTouchUpInside]
+      doNext:^(id x){
+          self.signInButton.enabled =NO;
+          self.signInFailureText.hidden =YES;
+      }]
+      flattenMap:^id(id x){
+          return[self signInSignal];
+      }]
+     subscribeNext:^(id x){
+         self.signInButton.enabled = YES;
+         BOOL success =[x boolValue];
+         self.signInFailureText.hidden = success;
+         NSLog(@"succes is %@", x);
+         if(success){
+             [self performSegueWithIdentifier:@"signInSuccess" sender:self];
+         }
+     }];
   
   // initially hide the failure message
   self.signInFailureText.hidden = YES;
@@ -83,6 +99,19 @@
   return password.length > 3;
 }
 
+- (RACSignal *)signInSignal {
+    return [RACSignal createSignal:^RACDisposable *(id<RACSubscriber> subscriber) {
+        [self.signInService signInWithUsername:self.usernameTextField.text password:self.passwordTextField.text complete:^(BOOL a) {
+            [subscriber sendNext:@(a)];
+            [subscriber sendCompleted];
+        }];
+        
+        return nil;
+    }];
+
+}
+
+/*
 - (IBAction)signInButtonTouched:(id)sender {
   // disable all UI controls
   self.signInButton.enabled = NO;
@@ -100,7 +129,7 @@
                             }];
 }
 
-
+*/
 // updates the enabled state and style of the text fields based on whether the current username
 // and password combo is valid
 
